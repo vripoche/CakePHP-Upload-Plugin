@@ -85,7 +85,7 @@ class UploadBehavior extends ModelBehavior {
             $uploadPath = WWW_ROOT . $this->settings[$model->alias][$field]['dir'] . DS;
             if ($size && !$error) {
                 if(! $this->_checkSize($tmp_name, $this->settings[$model->alias][$field]['size'])) {
-                    $model->validationErrors[$field] = __(sprintf("Maximum file size limit (%sMb)", $this->settings[$model->alias][$field]['size']));
+                    $model->invalidate($field, __(sprintf("Maximum file size limit (%sMb)", $this->settings[$model->alias][$field]['size'])));
                     return false;
                 }
                 if($ext = $this->_checkMime($tmp_name, $this->settings[$model->alias][$field]['types'])) {
@@ -93,14 +93,16 @@ class UploadBehavior extends ModelBehavior {
                     $this->_filesList[] = array('tmpPath' => $tmp_name, 'uploadPath' => $uploadPath . $fileName, 'ext' => $ext, 'field' => $field);
                     $model->data[$model->alias][$field] = $fileName;
                 } else {
-                    $model->validationErrors[$field] = __("The file type is not authorized");
+                    $model->invalidate($field, __("The file type is not authorized"));
                     return false;
                 }
-            }else if(isset($model->data[$model->alias][self::_getCurrentFieldName($field)])) {
+            }else if(empty($name)) {
                 $model->data[$model->alias][$field] = $model->data[$model->alias][self::_getCurrentFieldName($field)];
                 unset($model->data[$model->alias][self::_getCurrentFieldName($field)]);
             } else {
                 unset($model->data[$model->alias][$field]);
+                $model->invalidate($field, __("The file is empty or an upload error was detected"));
+                return false;
             }
         }
         return true;
