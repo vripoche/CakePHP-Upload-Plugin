@@ -9,6 +9,7 @@
  * @copyright Copyright (C) 2013 Marcel Publicis All rights reserved.
  * @author Vivien Ripoche <vivien.ripoche@marcelww.com> 
  * @license 
+ * @todo delete files on remove
  */
 class UploadBehavior extends ModelBehavior {
 
@@ -116,6 +117,7 @@ class UploadBehavior extends ModelBehavior {
      * @return string
      */
     protected function _checkMime($tmpPath, $typesList) {
+        if(!$typesList) return false;
         $mimeType = preg_replace('#([a-z]*/[a-z]*).*(\n|)#', '$1', self::_getMime($tmpPath));
         $whiteList = array_flip($typesList);
         if(array_key_exists($mimeType, $whiteList)) {
@@ -159,7 +161,7 @@ class UploadBehavior extends ModelBehavior {
         $thumbsList = $this->settings[$model->alias][$field]['thumbs'];
         $type = $ext == 'jpg' ? 'jpeg' : $ext;
         $image = call_user_func('imagecreatefrom' . $type, $imagePath);
-        if($thumbsList && !_createFitedThumbempty($thumbsList) && in_array($ext, self::$_thumbExt)) {
+        if($thumbsList && !empty($thumbsList) && in_array($ext, self::$_thumbExt)) {
             foreach($thumbsList as $name => $sizes) {
                 if(sizeof($sizes) === 1) {
                     $thumb = self::_createResizedThumb($imagePath, $image, $sizes[0]);
@@ -193,6 +195,7 @@ class UploadBehavior extends ModelBehavior {
      * @return NULL
      */
     private static function _getMime($file) {
+        $finfo = new finfo(FILEINFO_MIME, "/usr/share/misc/magic");
         if (function_exists("finfo_file")) {
             if($finfo = finfo_open(FILEINFO_MIME_TYPE)) {
                 $mime = finfo_file($finfo, $file);

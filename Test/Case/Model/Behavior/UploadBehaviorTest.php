@@ -33,6 +33,28 @@ class TestUploadFurther extends CakeTestModel {
     );
 }
 
+class TestErrorSize extends CakeTestModel {
+    public $useTable = 'uploads';
+    public $actsAs = array(
+        'Upload.Upload' => array(
+            'picture' => array(
+                'size' => 0
+            )
+        )
+    );
+}
+
+class TestErrorMime extends CakeTestModel {
+    public $useTable = 'uploads';
+    public $actsAs = array(
+        'Upload.Upload' => array(
+            'picture' => array(
+                'types' => null
+            )
+        )
+    );
+}
+
 class UploadBehaviorTest extends CakeTestCase {
 
     public $fixtures = array('plugin.upload.upload');
@@ -48,6 +70,8 @@ class UploadBehaviorTest extends CakeTestCase {
         $this->TestUploadSimple = ClassRegistry::init('TestUploadSimple');
         $this->TestUploadComplete = ClassRegistry::init('TestUploadComplete');
         $this->TestUploadFurther = ClassRegistry::init('TestUploadFurther');
+        $this->TestErrorSize = ClassRegistry::init('TestErrorSize');
+        $this->TestErrorMime = ClassRegistry::init('TestErrorMime');
 
         $this->currentTestMethod = $method;
         $this->dir = dirname(__FILE__) . DS . '..' . DS . '..' . DS . '..' . DS . 'Fixture';
@@ -127,6 +151,12 @@ class UploadBehaviorTest extends CakeTestCase {
 
         $this->mockUploadBehavior->setup($this->TestUploadFurther, $this->TestUploadFurther->actsAs['Upload.Upload']);
         $this->TestUploadFurther->Behaviors->set('Upload', $this->mockUploadBehavior);
+
+        $this->mockUploadBehavior->setup($this->TestErrorSize, $this->TestErrorSize->actsAs['Upload.Upload']);
+        $this->TestErrorSize->Behaviors->set('Upload', $this->mockUploadBehavior);
+
+        /*$this->mockUploadBehavior->setup($this->TestErrorMime, $this->TestErrorMime->actsAs['Upload.Upload']);
+        $this->TestErrorMime->Behaviors->set('Upload', $this->mockUploadBehavior);*/
     }
 
     public function endTest($method) {
@@ -134,6 +164,8 @@ class UploadBehaviorTest extends CakeTestCase {
         unset($this->TestUploadSimple);
         unset($this->TestUploadComplete);
         unset($this->TestUploadFurther);
+        unset($this->TestErrorSize);
+        unset($this->TestErrorMime);
     }
 
     public function testSetup() {
@@ -218,7 +250,17 @@ class UploadBehaviorTest extends CakeTestCase {
                 $this->assertEqual($height, 200);
             }
 
-            unlink(WWW_ROOT . DS . 'files' . DS . $result['TestUploadComplete']['picture' . $fieldPostfix]);
+            unlink(WWW_ROOT . 'files' . DS . $result['TestUploadComplete']['picture' . $fieldPostfix]);
         }
+    }
+
+    public function testRealErrors() {
+        $this->mockUpload();
+
+        $result = $this->TestErrorSize->save($this->data['test_insert']);
+        $this->assertFalse($result);
+
+        $result = $this->TestErrorMime->save($this->data['test_insert']);
+        $this->assertFalse($result);
     }
 }
