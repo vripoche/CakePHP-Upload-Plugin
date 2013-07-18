@@ -123,12 +123,6 @@ class UploadBehaviorTest extends CakeTestCase {
             'picture' => array()
         );
 
-        $this->data['test_remove'] = array(
-            'picture' => array(
-                'remove' => true,
-            )
-        );
-
         copy($this->dir . DS . 'image.jpg', $this->tmpDir . DS . 'tmp.jpg');
         copy($this->dir . DS . 'image.jpg', $this->tmpDir . DS . 'tmp2.jpg');
     }
@@ -262,5 +256,22 @@ class UploadBehaviorTest extends CakeTestCase {
 
         $result = $this->TestErrorMime->save($this->data['test_insert']);
         $this->assertFalse($result);
+    }
+
+    public function testDelete() {
+        $this->mockUpload(array('_moveUploadedFile'));
+        $this->mockUploadBehavior->expects($this->once())->method('_moveUploadedFile')->will($this->returnCallback(function($tmpFilePath, $filePath) {
+            return rename($tmpFilePath, $filePath);
+        }));
+
+        $saveResult = $this->TestUploadComplete->save($this->data['test_insert']);
+        $deleteResult = $this->TestUploadComplete->delete($saveResult['TestUploadComplete']['id']);
+
+        $this->assertTrue($deleteResult);
+
+        foreach(array('file', 'small', 'crop') as $prefix) {
+            $fieldPostfix = $prefix != 'file' ? '_' . $prefix : null;
+            $this->assertFalse(file_exists(WWW_ROOT . 'files' . DS . $saveResult['TestUploadComplete']['picture' . $fieldPostfix]));
+        }
     }
 }

@@ -53,6 +53,13 @@ class UploadBehavior extends ModelBehavior {
         return $this->_upload($model);
     }
 
+    public function beforeDelete(Model $model) {
+        foreach($this->settings[$model->alias] as $field => $options) {
+            $this->_deleteFile($model, $field);
+        }
+        return true;
+    }
+
     /**
      * _upload uploads and generates thumbs from the files list
      * 
@@ -66,7 +73,7 @@ class UploadBehavior extends ModelBehavior {
         foreach($this->_filesList as $file) {
             $this->_generateThumbs($model, $file['field'], $file['uploadPath'], $file['ext']);
             if(isset($model->data[$model->alias][self::_getCurrentFieldName($file['field'])])) {
-                unlink($uploadPath . $model->data[$model->alias][self::_getCurrentFieldName($file['field'])]);
+                self::_deleteAllFiles($file['uploadPath'] . $model->data[$model->alias][self::_getCurrentFieldName($file['field'])], $this->settings[$model->alias][$field]['thumbs']);
                 unset($model->data[$model->alias][self::_getCurrentFieldName($file['field'])]);
             }
         }
@@ -107,6 +114,19 @@ class UploadBehavior extends ModelBehavior {
             }
         }
         return true;
+    }
+
+    /**
+     * _deleteFile delete the file from the field
+     * 
+     * @param Model $model 
+     * @param mixed $field 
+     * @return NULL
+     */
+    protected function _deleteFile(Model &$model, $field) {
+        $data = $model->read();
+        $uploadPath = WWW_ROOT . $this->settings[$model->alias][$field]['dir'] . DS;
+        self::_deleteAllFiles($uploadPath . $data[$model->alias][$field], $this->settings[$model->alias][$field]['thumbs']);
     }
 
     /**
@@ -186,6 +206,22 @@ class UploadBehavior extends ModelBehavior {
      */
     private function _getFileName($prefix, $ext) {
         return $prefix . '-' . uniqid() . '.' . $ext;
+    }
+
+    /**
+     * _deleteAllFiles remove the file and its thumbs
+     * 
+     * @param mixed $filePath 
+     * @param mixed $thumbsList 
+     * @return NULL
+     */
+    private static function _deleteAllFiles($filePath, $thumbsList) {
+        unlink($filePath);
+        if(is_array($thumbsList)) {
+            foreach($thumbsList as $key => $value) {
+                unlink(preg_replace(sprintf('#\%s[^\%s]*\-([^\-]*)$#', DS, DS), DS . $key . '-$1', $filePath));
+            }
+        }
     }
 
     /**
