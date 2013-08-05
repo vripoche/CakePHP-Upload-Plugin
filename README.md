@@ -6,6 +6,8 @@ For CakePHP 2.x, used to automatically upload files and control their integrity 
 Setup
 -----
 
+__The Plugin works with the PECL package php_fileinfo (or deprecated mime_content_type function) to determine the mime type.__
+
 You need to clone the project into a "Plugin" directory in app/Plugin.
 Then, add this "CakePlugin::load" in the app bootstrap:
 ```php
@@ -43,7 +45,7 @@ Add the upload fields in the Behavior declaration, you can add custom options or
 Use the UploadForm Helper in Views
 ----------------------------------
 
-Instead od using Form Helper It necessary to use its brother, UploadForm, first add the Helper declaration in Controller:
+Instead of using Form Helper It necessary to use its brother, FormUpload, first add the Helper declaration in Controller:
 ```php
 public $helpers = array('Upload.FormUpload');
 ```
