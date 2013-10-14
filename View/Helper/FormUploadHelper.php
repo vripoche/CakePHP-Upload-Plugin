@@ -24,7 +24,7 @@ class FormUploadHelper extends FormHelper {
             if(in_array($ext, self::$_imageTypes)) {
                 $output .= $this->Html->image('/' . $options['dir'] . '/' . $fileName, array('alt' => '', 'width' => 200));
             } else {
-                $output .= $this->Html->link('/' . $options['dir'] . '/' . $fileName);
+            	if(!empty($fileName)) $output .= $this->Html->link('/' . $options['dir'] . '/' . $fileName);
             }
             $output .= $this->input($currentFieldName, array( 'type' => 'hidden', 'value' => $fileName, 'name' => 'data[' . $this->defaultModel .'][' . $currentFieldName . ']', 'id' => $this->defaultModel . ucfirst($currentFieldName)));
         }
