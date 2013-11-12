@@ -75,7 +75,7 @@ class UploadBehavior extends ModelBehavior {
         foreach($this->_filesList as $file) {
             @$this->_generateThumbs($model, $file['field'], $file['uploadPath'], $file['ext']);
             if(!empty($model->data[$model->alias][self::_getCurrentFieldName($file['field'])])) {
-                self::_deleteAllFiles($file['uploadPath'] . $model->data[$model->alias][self::_getCurrentFieldName($file['field'])], $this->settings[$model->alias][$field]['thumbs']);
+                self::_deleteAllFiles($file['uploadPath'] . $model->data[$model->alias][self::_getCurrentFieldName($file['field'])], $this->settings[$model->alias][$file['field']]['thumbs']);
                 unset($model->data[$model->alias][self::_getCurrentFieldName($file['field'])]);
             }
         }
@@ -110,8 +110,11 @@ class UploadBehavior extends ModelBehavior {
                     return false;
                 }
             }else if(empty($name)) {
-                $model->data[$model->alias][$field] = $model->data[$model->alias][self::_getCurrentFieldName($field)];
-                unset($model->data[$model->alias][self::_getCurrentFieldName($field)]);
+                if(isset($model->data[$model->alias][self::_getCurrentFieldName($field)])){
+                	$model->data[$model->alias][$field] = $model->data[$model->alias][self::_getCurrentFieldName($field)];
+                	unset($model->data[$model->alias][self::_getCurrentFieldName($field)]);
+                }
+                else unset($model->data[$model->alias][$field]);
             } else {
                 unset($model->data[$model->alias][$field]);
                 $model->invalidate($field, __("The file is empty or an upload error was detected"));
@@ -239,9 +242,8 @@ class UploadBehavior extends ModelBehavior {
      * @return NULL
      */
     private static function _getMime($file) {
-        $finfo = new finfo(FILEINFO_MIME, "/usr/share/misc/magic");
         if (function_exists("finfo_file")) {
-            if($finfo = finfo_open(FILEINFO_MIME_TYPE)) {
+            if(defined('FILEINFO_MIME_TYPE') && $finfo = finfo_open(FILEINFO_MIME_TYPE)) {
                 $mime = finfo_file($finfo, $file);
                 finfo_close($finfo);
             } else {
@@ -280,6 +282,8 @@ class UploadBehavior extends ModelBehavior {
         if($currentWidth) {
             $newHeight = intval($newWidth * $currentHeight / $currentWidth);
             $thumb = imagecreatetruecolor($newWidth, $newHeight);
+            imagealphablending( $thumb, false);
+            imagesavealpha( $thumb, true);
             imagecopyresized($thumb, $image, 0, 0, 0, 0, $newWidth, $newHeight, $currentWidth, $currentHeight);
         }
         return $thumb;
