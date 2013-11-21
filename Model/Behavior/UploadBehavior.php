@@ -48,7 +48,7 @@ class UploadBehavior extends ModelBehavior {
      * @param Model $model 
      * @return NULL
      */
-    public function beforeSave(Model $model) {
+    public function beforeSave(Model $model, $options = array()) {
         foreach($this->settings[$model->alias] as $field => $options) {
             if(! $this->_addFile($model, $field)) return false;
         }
