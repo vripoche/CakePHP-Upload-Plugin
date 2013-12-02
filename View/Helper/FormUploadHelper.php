@@ -4,6 +4,7 @@ App::uses('HtmlHelper', 'View/Helper');
 
 class FormUploadHelper extends FormHelper {
     public $helpers = array('Html');
+    const RETINA_SUFFIX = '@2x.';
     private static $_imageTypes = array('jpg', 'png', 'gif');
     public function create($model = null, $options = array()) {
         $options['type'] = 'file';
@@ -19,7 +20,10 @@ class FormUploadHelper extends FormHelper {
 
         $output .= $this->input($fieldName, $options);
         if(isset($options['isEdition']) && $options['isEdition']) {
-            $fileName = is_array($options['value']) ? $this->data[$this->defaultModel][$currentFieldName] : $options['value'];
+        	if(!empty($options['changeName']))
+        		$fileName = $options['changeName'];
+        	else
+           		$fileName = is_array($options['value']) ? $this->data[$this->defaultModel][$currentFieldName] : $options['value'];
             $ext = pathinfo($fileName, PATHINFO_EXTENSION);
             if(in_array($ext, self::$_imageTypes)) {
                 $output .= $this->Html->image('/' . $options['dir'] . '/' . $fileName, array('alt' => '', 'width' => 200));
