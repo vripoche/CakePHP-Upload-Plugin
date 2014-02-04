@@ -6,6 +6,8 @@ For CakePHP 2.x, used to automatically upload files and control their integrity 
 Setup
 -----
 
+You must install Fileinfo PHP module before: http://pecl.php.net/package/Fileinfo
+
 You need to clone the project into a "Plugin" directory in app/Plugin.
 Then, add this "CakePlugin::load" in the app bootstrap:
 
