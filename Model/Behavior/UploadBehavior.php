@@ -17,10 +17,12 @@ class UploadBehavior extends ModelBehavior {
         'dir' => 'files',
         'prefix' => 'file',
         'thumbs' => null,
+    	'retina' => false,
         'types' => array('jpg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif'),
         'size' => 1
     );
 
+    const RETINA_SUFFIX = '@2x.';
     private $_filesList = array();
     private static $_thumbExt = array('jpg', 'png', 'gif');
 
@@ -46,14 +48,14 @@ class UploadBehavior extends ModelBehavior {
      * @param Model $model 
      * @return NULL
      */
-    public function beforeSave(Model $model) {
+    public function beforeSave(Model $model, $options = array()) {
         foreach($this->settings[$model->alias] as $field => $options) {
             if(! $this->_addFile($model, $field)) return false;
         }
         return $this->_upload($model);
     }
 
-    public function beforeDelete(Model $model) {
+	public function beforeDelete(Model $model, $cascade = true) {
         foreach($this->settings[$model->alias] as $field => $options) {
             $this->_deleteFile($model, $field);
         }
@@ -68,12 +70,12 @@ class UploadBehavior extends ModelBehavior {
      */
     protected function _upload(&$model) {
         foreach($this->_filesList as $file) {
-            if(! $this->_moveUploadedFile($file['tmpPath'], $file['uploadPath'])) return false;
+        	if(! $this->_moveUploadedFile($file['tmpPath'], $file['uploadPath'])) return false;
         }
         foreach($this->_filesList as $file) {
-            $this->_generateThumbs($model, $file['field'], $file['uploadPath'], $file['ext']);
-            if(isset($model->data[$model->alias][self::_getCurrentFieldName($file['field'])])) {
-                self::_deleteAllFiles($file['uploadPath'] . $model->data[$model->alias][self::_getCurrentFieldName($file['field'])], $this->settings[$model->alias][$field]['thumbs']);
+            @$this->_generateThumbs($model, $file['field'], $file['uploadPath'], $file['ext']);
+            if(!empty($model->data[$model->alias][self::_getCurrentFieldName($file['field'])])) {
+                self::_deleteAllFiles($file['uploadPath'] . $model->data[$model->alias][self::_getCurrentFieldName($file['field'])], $this->settings[$model->alias][$file['field']]['thumbs']);
                 unset($model->data[$model->alias][self::_getCurrentFieldName($file['field'])]);
             }
         }
@@ -98,15 +100,21 @@ class UploadBehavior extends ModelBehavior {
                 }
                 if($ext = $this->_checkMime($tmp_name, $this->settings[$model->alias][$field]['types'])) {
                     $fileName = $this->_getFileName($this->settings[$model->alias][$field]['prefix'], $ext);
-                    $this->_filesList[] = array('tmpPath' => $tmp_name, 'uploadPath' => $uploadPath . $fileName, 'ext' => $ext, 'field' => $field);
                     $model->data[$model->alias][$field] = $fileName;
+                    if($this->settings[$model->alias][$field]['retina']){
+                    	$fileName = str_replace ( '.', self::RETINA_SUFFIX, $fileName);
+                    }
+                    $this->_filesList[] = array('tmpPath' => $tmp_name, 'uploadPath' => $uploadPath . $fileName, 'ext' => $ext, 'field' => $field);
                 } else {
                     $model->invalidate($field, __("The file type is not authorized"));
                     return false;
                 }
             }else if(empty($name)) {
-                $model->data[$model->alias][$field] = $model->data[$model->alias][self::_getCurrentFieldName($field)];
-                unset($model->data[$model->alias][self::_getCurrentFieldName($field)]);
+                if(isset($model->data[$model->alias][self::_getCurrentFieldName($field)])){
+                	$model->data[$model->alias][$field] = $model->data[$model->alias][self::_getCurrentFieldName($field)];
+                	unset($model->data[$model->alias][self::_getCurrentFieldName($field)]);
+                }
+                else unset($model->data[$model->alias][$field]);
             } else {
                 unset($model->data[$model->alias][$field]);
                 $model->invalidate($field, __("The file is empty or an upload error was detected"));
@@ -178,23 +186,26 @@ class UploadBehavior extends ModelBehavior {
      * @return NULL
      */
     protected function _generateThumbs(&$model, $field, $imagePath, $ext) {
-        $thumbsList = $this->settings[$model->alias][$field]['thumbs'];
-        $type = $ext == 'jpg' ? 'jpeg' : $ext;
-        $image = call_user_func('imagecreatefrom' . $type, $imagePath);
-        if($thumbsList && !empty($thumbsList) && in_array($ext, self::$_thumbExt)) {
-            foreach($thumbsList as $name => $sizes) {
-                if(sizeof($sizes) === 1) {
-                    $thumb = self::_createResizedThumb($imagePath, $image, $sizes[0]);
-                } else if (sizeof($sizes) === 2) {
-                    $thumb = self::_createCroppedThumb($imagePath, $image, $sizes[0], $sizes[1]);
-                }
-                $newPath = preg_replace('/' . addslashes($this->settings[$model->alias][$field]['prefix'] . '-') . '([^.]+\.[a-z]{3})$/', $name . '-$1', $imagePath);
-                call_user_func('image' . $type, $thumb, $newPath);
-                $model->data[$model->alias][$field . '_' . $name] = basename($newPath);
-                imagedestroy($thumb);
-            }
-        }
-        imagedestroy($image);
+    	$thumbsList = $this->settings[$model->alias][$field]['thumbs'];
+    	$type = $ext == 'jpg' ? 'jpeg' : $ext;
+    	$image = call_user_func('imagecreatefrom' . $type, $imagePath);
+    	if($thumbsList && !empty($thumbsList) && in_array($ext, self::$_thumbExt)) {
+    		foreach($thumbsList as $name => $sizes) {
+    			if(sizeof($sizes) === 1) {
+    				$thumb = self::_createResizedThumb($imagePath, $image, $sizes[0]);
+    			} else if (sizeof($sizes) === 2) {
+    				$thumb = self::_createCroppedThumb($imagePath, $image, $sizes[0], $sizes[1]);
+    			}
+    			$newPath = preg_replace('/' . addslashes($this->settings[$model->alias][$field]['prefix'] . '-') . '([^.]+\.[a-z]{3})$/', $name . '-$1', $imagePath);
+    			if($this->settings[$model->alias][$field]['retina']){
+    				$newPath = str_replace ( self::RETINA_SUFFIX, '.', $newPath);
+    			}
+    			call_user_func('image' . $type, $thumb, $newPath);
+    			$model->data[$model->alias][$field . '_' . $name] = basename($newPath);
+    			imagedestroy($thumb);
+    		}
+    	}
+    	imagedestroy($image);
     }
 
     /**
@@ -216,10 +227,10 @@ class UploadBehavior extends ModelBehavior {
      * @return NULL
      */
     private static function _deleteAllFiles($filePath, $thumbsList) {
-        unlink($filePath);
+        @unlink($filePath);
         if(is_array($thumbsList)) {
             foreach($thumbsList as $key => $value) {
-                unlink(preg_replace(sprintf('#\%s[^\%s]*\-([^\-]*)$#', DS, DS), DS . $key . '-$1', $filePath));
+                @unlink(preg_replace(sprintf('#\%s[^\%s]*\-([^\-]*)$#', DS, DS), DS . $key . '-$1', $filePath));
             }
         }
     }
@@ -231,9 +242,8 @@ class UploadBehavior extends ModelBehavior {
      * @return NULL
      */
     private static function _getMime($file) {
-        $finfo = new finfo(FILEINFO_MIME, "/usr/share/misc/magic");
         if (function_exists("finfo_file")) {
-            if($finfo = finfo_open(FILEINFO_MIME_TYPE)) {
+            if(defined('FILEINFO_MIME_TYPE') && $finfo = finfo_open(FILEINFO_MIME_TYPE)) {
                 $mime = finfo_file($finfo, $file);
                 finfo_close($finfo);
             } else {
@@ -272,6 +282,8 @@ class UploadBehavior extends ModelBehavior {
         if($currentWidth) {
             $newHeight = intval($newWidth * $currentHeight / $currentWidth);
             $thumb = imagecreatetruecolor($newWidth, $newHeight);
+            imagealphablending( $thumb, false);
+            imagesavealpha( $thumb, true);
             imagecopyresized($thumb, $image, 0, 0, 0, 0, $newWidth, $newHeight, $currentWidth, $currentHeight);
         }
         return $thumb;
