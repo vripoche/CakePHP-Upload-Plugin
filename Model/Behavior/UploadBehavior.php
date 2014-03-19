@@ -49,8 +49,26 @@ class UploadBehavior extends ModelBehavior {
      * @return NULL
      */
     public function beforeSave(Model $model, $options = array()) {
+        $oldData = array();
+        $pkName = $model->primaryKey;
+        if (isset($model->data[$model->alias][$pkName])) {
+            $pkValue  = $model->data[$model->alias][$pkName];
+            $findParams = array(
+                'recursive' => -1,
+                'conditions' => array(
+                    $pkName => $pkValue
+                )
+            );
+            $oldData = $model->find('first', $findParams);
+            
+        }
         foreach($this->settings[$model->alias] as $field => $options) {
             if(! $this->_addFile($model, $field)) return false;
+            $currentField = $model->data[$model->alias][self::_getCurrentFieldName($field)];
+            if (!empty($oldData) && !empty($oldData[$model->alias][$field]) && empty($currentField)) {
+                $uploadPath = WWW_ROOT . $this->settings[$model->alias][$field]['dir'] . DS;
+                self::_deleteAllFiles($uploadPath . $oldData[$model->alias][$field], $this->settings[$model->alias][$field]['thumbs']);
+            }
         }
         return $this->_upload($model);
     }
@@ -74,8 +92,9 @@ class UploadBehavior extends ModelBehavior {
         }
         foreach($this->_filesList as $file) {
             @$this->_generateThumbs($model, $file['field'], $file['uploadPath'], $file['ext']);
+            $uploadPath = WWW_ROOT . $this->settings[$model->alias][$file['field']]['dir'] . DS;
             if(!empty($model->data[$model->alias][self::_getCurrentFieldName($file['field'])])) {
-                self::_deleteAllFiles($file['uploadPath'] . $model->data[$model->alias][self::_getCurrentFieldName($file['field'])], $this->settings[$model->alias][$file['field']]['thumbs']);
+                self::_deleteAllFiles($uploadPath . $model->data[$model->alias][self::_getCurrentFieldName($file['field'])], $this->settings[$model->alias][$file['field']]['thumbs']);
                 unset($model->data[$model->alias][self::_getCurrentFieldName($file['field'])]);
             }
         }
