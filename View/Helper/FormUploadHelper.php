@@ -6,10 +6,12 @@ class FormUploadHelper extends FormHelper {
     public $helpers = array('Html');
     const RETINA_SUFFIX = '@2x.';
     private static $_imageTypes = array('jpg', 'png', 'gif');
+    
     public function create($model = null, $options = array()) {
         $options['type'] = 'file';
         return parent::create($model, $options);
     }
+    
     public function fileInput($fieldName, $options = array()) {
         $output = null;
         $options = $this->_initInputField($fieldName, $options);
@@ -21,10 +23,7 @@ class FormUploadHelper extends FormHelper {
         $output .= $this->input($fieldName, $options);
         if(isset($options['isEdition']) && $options['isEdition']) {
             $elementId = $this->defaultModel . ucfirst($currentFieldName);
-        	if(!empty($options['changeName']))
-        		$fileName = $options['changeName'];
-        	else
-           		$fileName = is_array($options['value']) ? $this->data[$this->defaultModel][$currentFieldName] : $options['value'];
+        	$fileName = is_array($options['value']) ? $this->data[$this->defaultModel][$currentFieldName] : $options['value'];
             $ext = pathinfo($fileName, PATHINFO_EXTENSION);
             if(in_array($ext, self::$_imageTypes)) {
                 $output .= $this->Html->image('/' . $options['dir'] . '/' . $fileName, array('alt' => '', 'width' => 200, 'id' => $elementId . 'Img'));
@@ -38,8 +37,13 @@ class FormUploadHelper extends FormHelper {
         }
         return $output;
     }
+    
     public function thumbName($filename, $prefix) {
         return preg_replace('/^.*\-/', $prefix . '-', $filename);
+    }
+    
+    public function imageUrl($name, $dir='/files/') {
+    	return (!empty($name))?"<img src=\"$dir$name\" height=\"100\">":"";
     }
     
     protected function _removeButtonHtml($id) {

@@ -20,6 +20,7 @@ Configure The Behavior in Models
 >        'Upload.Upload' => array(
 >            'photo',
 >            'picture' => array(
+>                'root' => WWW_ROOT,
 >                'prefix' => 'file',
 >                'dir' => 'files',
 >                'types' => array('jpg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif'),
@@ -35,6 +36,7 @@ Configure The Behavior in Models
 
 Add the upload fields in the Behavior declaration, you can add custom options or not, here the fields are "photo" and "picture".
 
+- root: the root of uploaded files folder. By default 'webroot' of 'app' folder.
 - prefix: the prefix of the uploaded file that will be for example: file-123abc456.jpg
 - dir: the webroot directory where the file will be uploaded, "files" by default,
 - types: the file types authorized to download, "jpg", "png" andd "gif" by default. The key is the extension and the value the mime type,
