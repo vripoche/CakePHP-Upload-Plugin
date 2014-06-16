@@ -307,8 +307,8 @@ class UploadBehavior extends ModelBehavior {
         if($currentWidth) {
             $newHeight = intval($newWidth * $currentHeight / $currentWidth);
             $thumb = imagecreatetruecolor($newWidth, $newHeight);
-            imagealphablending( $thumb, false);
-            imagesavealpha( $thumb, true);
+            imagealphablending($thumb, false);
+            imagesavealpha($thumb, true);
             imagecopyresized($thumb, $image, 0, 0, 0, 0, $newWidth, $newHeight, $currentWidth, $currentHeight);
         }
         return $thumb;
@@ -341,8 +341,10 @@ class UploadBehavior extends ModelBehavior {
             $srcX = floor($crop / 2);
         }
 
-        $thumb = imagecreatetruecolor($newWidth, $newHeight);
-        imagecopyresampled($thumb, $image, 0, 0, $srcX, $srcY, $newWidth, $newHeight, $currentWidth, $currentHeight);
-        return $thumb;
+    	$thumb = imagecreatetruecolor($newWidth, $newHeight);
+    	imagealphablending($thumb, false);
+    	imagesavealpha($thumb, true);
+    	imagecopyresampled($thumb, $image, 0, 0, $srcX, $srcY, $newWidth, $newHeight, $currentWidth, $currentHeight);
+    	return $thumb;
     }
 }
