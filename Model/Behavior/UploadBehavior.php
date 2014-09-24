@@ -14,6 +14,7 @@
 class UploadBehavior extends ModelBehavior {
 
     public $defaults = array(
+    	'root' => WWW_ROOT,
         'dir' => 'files',
         'prefix' => 'file',
         'thumbs' => null,
@@ -49,8 +50,26 @@ class UploadBehavior extends ModelBehavior {
      * @return NULL
      */
     public function beforeSave(Model $model, $options = array()) {
+        $oldData = array();
+        $pkName = $model->primaryKey;
+        if (isset($model->data[$model->alias][$pkName])) {
+            $pkValue  = $model->data[$model->alias][$pkName];
+            $findParams = array(
+                'recursive' => -1,
+                'conditions' => array(
+                    $pkName => $pkValue
+                )
+            );
+            $oldData = $model->find('first', $findParams);
+            
+        }
         foreach($this->settings[$model->alias] as $field => $options) {
             if(! $this->_addFile($model, $field)) return false;
+            $currentField = $model->data[$model->alias][self::_getCurrentFieldName($field)];
+            if (!empty($oldData) && !empty($oldData[$model->alias][$field]) && empty($model->data[$model->alias][$field])) {
+                $uploadPath = $this->settings[$model->alias][$field]['root'] . $this->settings[$model->alias][$field]['dir'] . DS;
+                self::_deleteAllFiles($uploadPath . $oldData[$model->alias][$field], $this->settings[$model->alias][$field]['thumbs']);
+            }
         }
         return $this->_upload($model);
     }
@@ -62,6 +81,11 @@ class UploadBehavior extends ModelBehavior {
         return true;
     }
 
+    public function uploadSettings(Model $model, $field=null){
+    	if($model && $field){
+    		if(!empty($this->settings[$model->alias][$field])) return $this->settings[$model->alias][$field];
+    	}
+    }
     /**
      * _upload uploads and generates thumbs from the files list
      * 
@@ -74,8 +98,9 @@ class UploadBehavior extends ModelBehavior {
         }
         foreach($this->_filesList as $file) {
             @$this->_generateThumbs($model, $file['field'], $file['uploadPath'], $file['ext']);
+            $uploadPath = $this->settings[$model->alias][$field]['root'] . $this->settings[$model->alias][$file['field']]['dir'] . DS;
             if(!empty($model->data[$model->alias][self::_getCurrentFieldName($file['field'])])) {
-                self::_deleteAllFiles($file['uploadPath'] . $model->data[$model->alias][self::_getCurrentFieldName($file['field'])], $this->settings[$model->alias][$file['field']]['thumbs']);
+                self::_deleteAllFiles($uploadPath . $model->data[$model->alias][self::_getCurrentFieldName($file['field'])], $this->settings[$model->alias][$file['field']]['thumbs']);
                 unset($model->data[$model->alias][self::_getCurrentFieldName($file['field'])]);
             }
         }
@@ -92,7 +117,7 @@ class UploadBehavior extends ModelBehavior {
     protected function _addFile(Model &$model, $field) {
         if (isset($model->data[$model->alias][$field])) {
             extract($model->data[$model->alias][$field]);
-            $uploadPath = WWW_ROOT . $this->settings[$model->alias][$field]['dir'] . DS;
+            $uploadPath = $this->settings[$model->alias][$field]['root'] . $this->settings[$model->alias][$field]['dir'] . DS;
             if ($size && !$error) {
                 if(! $this->_checkSize($tmp_name, $this->settings[$model->alias][$field]['size'])) {
                     $model->invalidate($field, __(sprintf("Maximum file size limit (%sMb)", $this->settings[$model->alias][$field]['size'])));
@@ -133,7 +158,7 @@ class UploadBehavior extends ModelBehavior {
      */
     protected function _deleteFile(Model &$model, $field) {
         $data = $model->read();
-        $uploadPath = WWW_ROOT . $this->settings[$model->alias][$field]['dir'] . DS;
+        $uploadPath = $this->settings[$model->alias][$field]['root'] . $this->settings[$model->alias][$field]['dir'] . DS;
         self::_deleteAllFiles($uploadPath . $data[$model->alias][$field], $this->settings[$model->alias][$field]['thumbs']);
     }
 
@@ -282,8 +307,8 @@ class UploadBehavior extends ModelBehavior {
         if($currentWidth) {
             $newHeight = intval($newWidth * $currentHeight / $currentWidth);
             $thumb = imagecreatetruecolor($newWidth, $newHeight);
-            imagealphablending( $thumb, false);
-            imagesavealpha( $thumb, true);
+            imagealphablending($thumb, false);
+            imagesavealpha($thumb, true);
             imagecopyresized($thumb, $image, 0, 0, 0, 0, $newWidth, $newHeight, $currentWidth, $currentHeight);
         }
         return $thumb;
@@ -316,8 +341,10 @@ class UploadBehavior extends ModelBehavior {
             $srcX = floor($crop / 2);
         }
 
-        $thumb = imagecreatetruecolor($newWidth, $newHeight);
-        imagecopyresampled($thumb, $image, 0, 0, $srcX, $srcY, $newWidth, $newHeight, $currentWidth, $currentHeight);
-        return $thumb;
+    	$thumb = imagecreatetruecolor($newWidth, $newHeight);
+    	imagealphablending($thumb, false);
+    	imagesavealpha($thumb, true);
+    	imagecopyresampled($thumb, $image, 0, 0, $srcX, $srcY, $newWidth, $newHeight, $currentWidth, $currentHeight);
+    	return $thumb;
     }
 }
